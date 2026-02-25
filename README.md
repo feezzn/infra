@@ -86,76 +86,70 @@ flowchart TB
 
 ---
 
-. Repository Structure
-environments/
-  dev/        # 🚀 automatic apply via CI
-  prod/       # 🔒 apply with manual approval
-  global/     # 🌍 shared/global resources (budget, etc)
-modules/
-  vpc/        # 🌐 custom VPC module
-  eks/        # ☸️ EKS module (terraform-aws-modules)
-bootstrap/
-  backend/    # 🗄️ remote backend (S3 + DynamoDB)
+## 🗄️ 5. Terraform State & Backend
+
+- 🪣 **S3** stores the Terraform state file
+- 🔐 **DynamoDB** provides state locking (prevents concurrent applies)
+- 🛠️ Backend resources are created via `bootstrap/backend`
+- 🔒 State is encrypted and versioned
 
 ---
 
-🗄️ 5. Terraform State & Backend
-🪣 S3 stores the Terraform state file
-🔐 DynamoDB provides state locking (prevents concurrent applies)
-🛠️ Backend resources are created via bootstrap/backend
-🔒 State is encrypted and versioned
+## 🔁 6. CI/CD — GitHub Actions
+
+### 🔐 Authentication
+- GitHub Actions authenticates to AWS using **OIDC**
+- ❌ No access keys stored in GitHub or locally
+- ⏱️ Temporary credentials via **AWS STS**
+
+### ⚙️ Workflow Behavior
+- `terraform fmt / validate / plan` on push
+- **dev**: 🚀 automatic `plan + apply` on `main`
+- **prod / global**: 🔒 apply requires manual approval (GitHub Environments)
 
 ---
 
-🔁 6. CI/CD — GitHub Actions
-🔐 Authentication
-GitHub Actions authenticates to AWS using OIDC
-❌ No access keys stored in GitHub or locally
-⏱️ Temporary credentials via AWS STS
-⚙️ Workflow Behavior
-terraform fmt / validate / plan on push
-dev: 🚀 automatic plan + apply on main
-prod / global: 🔒 apply requires manual approval (GitHub Environments)
+## 🔐 7. Security Considerations
+
+- ❌ No long-lived AWS credentials
+- 🛡️ IAM roles scoped with **least privilege**
+- 🔒 Remote state protected by locking
+- ☸️ Kubernetes access managed via IAM + EKS access entries
+- 🧩 Ready for **IRSA** and **GitOps** security patterns
 
 ---
 
-🔐 7. Security Considerations
-❌ No long-lived AWS credentials
-🛡️ IAM roles scoped with least privilege
-🔒 Remote state protected by locking
-☸️ Kubernetes access managed via IAM + EKS access entries
-🧩 Ready for IRSA and GitOps security patterns
+## 🧑‍💻 8. How to Operate Locally
+
+### 📋 Prerequisites
+- Terraform
+- AWS CLI
+- kubectl
 
 ---
 
-🧑💻 8. How to Operate Locally
-📋 Prerequisites
-Terraform
-AWS CLI
-kubectl
+## 📊 9. Current State
+
+- ☸️ **EKS cluster:** ACTIVE
+- 📦 **Kubernetes version:** 1.34
+- 🧱 **Node groups:** 1 (AL2023)
+- ⚙️ **Core addons:** healthy
+- ✅ **Terraform:** converged (no drift)
 
 ---
 
-📊 9. Current State
-☸️ EKS cluster: ACTIVE
-📦 Kubernetes version: 1.34
-🧱 Node groups: 1 (AL2023)
-⚙️ Core addons: healthy
-✅ Terraform: converged (no drift)
+## 🚀 10. Next Steps
+
+- ☸️ Install **Argo CD** (GitOps)
+- 📦 Deploy sample application via GitOps
+- 🔐 Harden EKS networking and endpoint access
+- 📈 Introduce autoscaling strategy
+- 🔄 Prepare upgrade path for Kubernetes versions
 
 ---
 
-🚀 10. Next Steps
-☸️ Install Argo CD (GitOps)
-📦 Deploy sample application via GitOps
-🔐 Harden EKS networking and endpoint access
-📈 Introduce autoscaling strategy
-🔄 Prepare upgrade path for Kubernetes versions
+## 👨‍💻 Author
 
----
-
-👨‍💻 Author
-
-Felipe
-☁️ Site Reliability / DevOps Engineer
-Focused on secure, reproducible and operable cloud infrastructure 🚀
+Felipe  
+☁️ Site Reliability / DevOps Engineer  
+Focused on **secure**, **reproducible** and **operable** cloud infrastructure 🚀
