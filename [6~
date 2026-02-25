@@ -1,0 +1,5 @@
+{
+    "UserId": "AROAZTXERMSFPR3GDH3LJ:local-terraform",
+    "Account": "660830512266",
+    "Arn": "arn:aws:sts::660830512266:assumed-role/iac-infra/local-terraform"
+}

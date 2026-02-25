@@ -10,10 +10,20 @@ crash.log
 .env
 *.key
 *.pem
-AccessKey*
 aws/dist/
 **/dist/
-**/*.zip
+awscliv2.zip
+ssm-plugin.*
+tf.sh
+k.sh
+AccessKey
+*.local.sh
+
 # Local helper scripts (optional)
 *.local.sh
 logs/
+
+# AWS CLI installers / packages
+*.deb
+*.rpm
+*.zip

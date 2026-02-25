@@ -3,28 +3,32 @@ module "eks" {
   version = "~> 21.0"
 
   name               = "dev-eks"
-  kubernetes_version = "1.33" # (lembra: upgrade minor step-by-step)
+  kubernetes_version = "1.34" # (lembra: upgrade minor step-by-step)
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnet_ids # ou suas subnet ids
 
   addons = {
     vpc-cni = {
+      before_compute = true
       most_recent                 = true
       resolve_conflicts_on_create = "OVERWRITE"
       resolve_conflicts_on_update = "OVERWRITE"
     }
     kube-proxy = {
+      before_compute = true
       most_recent                 = true
       resolve_conflicts_on_create = "OVERWRITE"
       resolve_conflicts_on_update = "OVERWRITE"
     }
     coredns = {
+      before_compute = true
       most_recent                 = true
       resolve_conflicts_on_create = "OVERWRITE"
       resolve_conflicts_on_update = "OVERWRITE"
     }
   }
+  
 
   endpoint_private_access      = true
   endpoint_public_access       = true
@@ -52,7 +56,7 @@ module "eks" {
 
       min_size     = 1
       max_size     = 2
-      desired_size = 1
+      desired_size = 2
 
       subnet_ids = [
         "subnet-09c1b57ce0a14dc7f",

@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")"
+
+# Hard reset any profile vars (some shells/plugins export empty values)
+unset AWS_PROFILE AWS_DEFAULT_PROFILE
+export AWS_SDK_LOAD_CONFIG=0
+
+# Assume role (exports key/secret/token)
+source ./assume.local.sh
+
+# Ensure still unset after sourcing (in case assume.local.sh sets it)
+unset AWS_PROFILE AWS_DEFAULT_PROFILE
+
+# Validate identity without triggering profile resolution
+AWS_SDK_LOAD_CONFIG=0 aws sts get-caller-identity >/dev/null
+
+echo "Using assumed role credentials ✅"
+
+"$@"
