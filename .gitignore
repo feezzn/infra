@@ -1,0 +1,19 @@
+# Terraform
+**/.terraform/*
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+
+# Sensitive files
+.envrc
+.env
+*.key
+*.pem
+AccessKey*
+aws/dist/
+**/dist/
+**/*.zip
+# Local helper scripts (optional)
+*.local.sh
+logs/

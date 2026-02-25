@@ -1,0 +1,280 @@
+name: Terraform
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'environments/**'
+      - 'modules/**'
+      - '.github/workflows/**'
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Which environment?'
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+          - global
+      action:
+        description: 'What to run?'
+        required: true
+        type: choice
+        options:
+          - apply
+          - destroy
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION_DEV: us-east-2
+  AWS_REGION_PROD: us-east-1
+  AWS_REGION_GLOBAL: us-east-1
+
+jobs:
+  lint:
+    name: Lint GitHub Actions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install actionlint
+        run: |
+          curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash
+      - name: Run actionlint
+        run: ./actionlint
+
+  changes:
+    name: Detect changes
+    needs: lint
+    runs-on: ubuntu-latest
+    outputs:
+      dev: ${{ steps.filter.outputs.dev }}
+      prod: ${{ steps.filter.outputs.prod }}
+      global: ${{ steps.filter.outputs.global }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Paths filter
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            dev:
+              - "environments/dev/**"
+              - "modules/**"
+            prod:
+              - "environments/prod/**"
+              - "modules/**"
+            global:
+              - "environments/global/**"
+              - "modules/**"
+
+  # -----------------------------
+  # PLAN jobs (on push only)
+  # -----------------------------
+  dev-plan:
+    name: Dev - Plan
+    needs: changes
+    if: github.event_name == 'push' && needs.changes.outputs.dev == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: environments/dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::660830512266:role/iac-infra
+          aws-region: ${{ env.AWS_REGION_DEV }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
+        working-directory: .
+
+      - name: Terraform init
+        run: terraform init -reconfigure
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan (save)
+        run: terraform plan -out=tfplan -no-color
+
+      - name: Upload tfplan
+        uses: actions/upload-artifact@v4
+        with:
+          name: dev-tfplan
+          path: environments/dev/tfplan
+          if-no-files-found: error
+
+  prod-plan:
+    name: Prod - Plan
+    needs: changes
+    if: github.event_name == 'push' && needs.changes.outputs.prod == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: environments/prod
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::660830512266:role/iac-infra
+          aws-region: ${{ env.AWS_REGION_PROD }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init
+        run: terraform init -reconfigure
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan (save)
+        run: terraform plan -out=tfplan -no-color
+
+      - name: Upload tfplan
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-tfplan
+          path: environments/prod/tfplan
+          if-no-files-found: error
+  # loucuras acontecem por aqui
+  global-plan:
+    name: Global - Plan
+    needs: changes
+    if: github.event_name == 'push' && needs.changes.outputs.global == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: environments/global
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::660830512266:role/iac-infra
+          aws-region: ${{ env.AWS_REGION_GLOBAL }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init
+        run: terraform init -reconfigure
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan (save)
+        run: terraform plan -out=tfplan -no-color
+
+      - name: Upload tfplan
+        uses: actions/upload-artifact@v4
+        with:
+          name: global-tfplan
+          path: environments/global/tfplan
+          if-no-files-found: error
+
+  # -----------------------------
+  # APPLY / DESTROY (manual only)
+  # -----------------------------
+  run:
+    name: Manual - ${{ inputs.action }} (${{ inputs.environment }})
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    # 🔐 This triggers GitHub Environment approvals (dev/prod/global)
+    environment: ${{ inputs.environment }}
+
+    # 🚦 Prevent concurrent state mutations per environment
+    concurrency:
+      group: terraform-${{ inputs.environment }}
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set env vars
+        id: vars
+        shell: bash
+        run: |
+          if [ "${{ inputs.environment }}" = "dev" ]; then
+          {
+          echo "WORKDIR=environments/dev"
+          echo "REGION=${{ env.AWS_REGION_DEV }}"
+          echo "TFPLAN=dev-tfplan"
+          } >> "$GITHUB_OUTPUT"
+          elif [ "${{ inputs.environment }}" = "prod" ]; then
+          {
+          echo "WORKDIR=environments/prod"
+          echo "REGION=${{ env.AWS_REGION_PROD }}"
+          echo "TFPLAN=prod-tfplan"
+          } >> "$GITHUB_OUTPUT"
+          else
+          {
+          echo "WORKDIR=environments/global"
+          echo "REGION=${{ env.AWS_REGION_GLOBAL }}"
+          echo "TFPLAN=global-tfplan"
+          } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::660830512266:role/iac-infra
+          aws-region: ${{ steps.vars.outputs.REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init (upgrade providers)
+        working-directory: ${{ steps.vars.outputs.WORKDIR }}
+        run: terraform init -upgrade -reconfigure
+
+      - name: Upload lockfile (debug)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.environment }}-lockfile
+          path: ${{ steps.vars.outputs.WORKDIR }}/.terraform.lock.hcl
+
+      # If APPLY: try to use last plan artifact (if it exists), otherwise just apply directly
+
+      - name: Download tfplan (if available)
+        if: inputs.action == 'apply'
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.vars.outputs.TFPLAN }}
+          path: ${{ steps.vars.outputs.WORKDIR }}
+
+      - name: Terraform apply (from plan if present)
+        if: inputs.action == 'apply'
+        working-directory: ${{ steps.vars.outputs.WORKDIR }}
+        shell: bash
+        run: |
+          if [ -f tfplan ]; then
+            terraform apply -auto-approve tfplan
+          else
+            terraform apply -auto-approve
+          fi
+
+      - name: Terraform apply
+        if: inputs.action == 'apply'
+        working-directory: ${{ steps.vars.outputs.WORKDIR }}
+        run: terraform apply -auto-approve
+
+      - name: Terraform destroy
+        if: inputs.action == 'destroy'
+        working-directory: ${{ steps.vars.outputs.WORKDIR }}
+        run: terraform destroy -auto-approve
