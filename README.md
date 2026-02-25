@@ -1,91 +1,110 @@
+```md
 ![Terraform CI](https://github.com/feezzn/infra/actions/workflows/terraform.yml/badge.svg)
 
-# ☁️ Infrastructure as Code - AWS + Terraform + GitHub OIDC
+# ☁️ AWS Infrastructure — Terraform + EKS + GitHub OIDC
 
-Projeto de infraestrutura como código (IaC) utilizando boas práticas modernas de segurança, automação e CI/CD.
-
-## 🏗️ Stack Utilizada
-- Terraform
-- AWS
-- GitHub Actions
-- OIDC (OpenID Connect)
-- IAM Roles
-- STS (Security Token Service)
+Infrastructure as Code (IaC) project to provision and operate AWS infrastructure using **Terraform**, following **enterprise-grade practices** for security, automation, and reproducibility.
 
 ---
 
-## 📁 Estrutura do Repositório
+## 1. Overview
 
-```text
+This repository provisions a complete AWS infrastructure from scratch, including networking, Kubernetes (EKS), remote Terraform state management, and CI/CD automation via GitHub Actions using **OIDC (no long-lived credentials)**.
+
+---
+
+## 2. Objectives
+
+- Fully reproducible infrastructure using Terraform
+- Clear separation of environments (dev / prod / global)
+- Secure CI/CD authentication using GitHub OIDC
+- Remote Terraform state with locking and encryption
+- Kubernetes-ready foundation for GitOps (Argo CD)
+
+---
+
+## 3. Architecture
+
+### 3.1 C4 — System Context
+
+```mermaid
+flowchart LR
+  Developer -->|git push| GitHub
+  GitHub -->|OIDC| AWS
+  AWS --> EKS
+  AWS --> S3
+  AWS --> DynamoDB
+
+---
+
+## 4. Repository Structure
 environments/
-  dev/     # apply automático via CI
-  prod/    # apply com aprovação (GitHub Environments)
-  global/  # recursos globais (ex: budget) com aprovação
+  dev/        # automatic apply via CI
+  prod/       # apply with manual approval
+  global/     # shared/global resources (budget, etc)
 modules/
-  vpc/     # módulo reutilizável de VPC (public/private subnets)
+  vpc/        # custom VPC module
+  eks/        # EKS module (terraform-aws-modules)
 bootstrap/
-  backend/ # criação do backend remoto (S3 + DynamoDB)
-```
----
-
-🔐 Autenticação Segura (Sem Access Keys)
-
-- Este projeto utiliza OIDC para permitir que o GitHub Actions assuma uma IAM Role diretamente na AWS.
-- Não há credenciais estáticas armazenadas no repositório.
-- Fluxo: GitHub Actions → Gera token OIDC temporário → AWS STS valida token → Assume IAM Role → Permissões temporárias são concedidas
+  backend/    # remote backend (S3 + DynamoDB)
 
 ---
 
-🧱 Backend Remoto (State + Lock)
-
-- O state do Terraform é armazenado em S3 e protegido por lock no DynamoDB.
-- S3: armazenamento do terraform.tfstate
-- DynamoDB: lock para evitar concorrência durante apply
-
----
-
-## ⚙️ CI Pipeline
-
-Workflow executado a cada push na branch `main`:
-
-1. Checkout do código
-2. Autenticação via OIDC
-3. Validação de identidade (`aws sts get-caller-identity`)
-4. (Em evolução) Terraform init / validate / plan
-5. dev: plan + apply automático em push na main
-6. prod/global: apply somente após aprovação (GitHub Environments)
+5. Terraform State & Backend
+S3 stores the Terraform state file
+DynamoDB provides state locking
+Backend resources are created via bootstrap/backend
+State is encrypted and versioned
 
 ---
 
-## 🎯 Objetivo do Projeto
-
-Construir uma base sólida para:
-
-- Separação de ambientes (dev / prod)
-- Backend remoto com S3 + DynamoDB
-- Controle de aprovação para produção
-- Estrutura modular Terraform
-- Práticas de FinOps (budget e alertas)
-
----
-
-💰 FinOps (Budget)
-
-- Budget global para controle de gasto mensal
-- Notificações por e-mail ao atingir percentual do limite
+6. CI/CD — GitHub Actions
+Authentication
+GitHub Actions authenticates to AWS using OIDC
+No access keys stored in GitHub or locally
+Temporary credentials via AWS STS
+Workflow Behavior
+terraform fmt / validate / plan on push
+dev: automatic plan + apply on main
+prod / global: apply requires manual approval via GitHub Environments
 
 ---
 
-🧠 Próxima Evolução
-
-- Security Groups + EC2 (acesso via SSM, sem SSH)
-- Base para EKS/ECS
-- Self-service provisioning (futuro)
-- Evolução multi-cloud (Azure) no futuro
+7. Security Considerations
+No long-lived AWS credentials
+IAM roles scoped with least privilege
+Remote state protected by locking
+Kubernetes access managed via IAM + EKS access entries
+Ready for IRSA and GitOps security patterns
 
 ---
 
-## 👨‍💻 Autor
+8. How to Operate Locally
+Prerequisites
+Terraform
+AWS CLI
+kubectl
 
-Felipe 😄
-Estudando DevOps e construindo prática real com foco em segurança e automação.
+---
+
+9. Current State
+EKS cluster: ACTIVE
+Kubernetes version: 1.34
+Node groups: 1 (AL2023)
+Core addons: healthy
+Terraform: converged (no drift)
+
+---
+
+10. Next Steps
+Install Argo CD (GitOps)
+Deploy sample application via GitOps
+Harden EKS networking and endpoint access
+Introduce autoscaling strategy
+Prepare upgrade path for Kubernetes versions
+
+---
+
+Felipe
+Site Reliability / DevOps Engineer
+Focused on secure, reproducible cloud infrastructure
