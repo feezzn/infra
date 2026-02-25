@@ -10,25 +10,25 @@ module "eks" {
 
   addons = {
     vpc-cni = {
-      before_compute = true
+      before_compute              = true
       most_recent                 = true
       resolve_conflicts_on_create = "OVERWRITE"
       resolve_conflicts_on_update = "OVERWRITE"
     }
     kube-proxy = {
-      before_compute = true
+      before_compute              = true
       most_recent                 = true
       resolve_conflicts_on_create = "OVERWRITE"
       resolve_conflicts_on_update = "OVERWRITE"
     }
     coredns = {
-      before_compute = true
+      before_compute              = true
       most_recent                 = true
       resolve_conflicts_on_create = "OVERWRITE"
       resolve_conflicts_on_update = "OVERWRITE"
     }
   }
-  
+
 
   endpoint_private_access      = true
   endpoint_public_access       = true
