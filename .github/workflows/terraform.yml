@@ -150,7 +150,8 @@ jobs:
           name: prod-tfplan
           path: environments/prod/tfplan
           if-no-files-found: error
-  # loucuras acontecem por aqui
+
+          # loucuras acontecem por aqui
   global-plan:
     name: Global - Plan
     needs: changes
@@ -251,30 +252,11 @@ jobs:
 
       # If APPLY: try to use last plan artifact (if it exists), otherwise just apply directly
 
-      - name: Download tfplan (if available)
-        if: inputs.action == 'apply'
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ steps.vars.outputs.TFPLAN }}
-          path: ${{ steps.vars.outputs.WORKDIR }}
-
-      - name: Terraform apply (from plan if present)
-        if: inputs.action == 'apply'
+      - name: Terraform plan
         working-directory: ${{ steps.vars.outputs.WORKDIR }}
-        shell: bash
-        run: |
-          if [ -f tfplan ]; then
-            terraform apply -auto-approve tfplan
-          else
-            terraform apply -auto-approve
-          fi
+        run: terraform plan -no-color
 
       - name: Terraform apply
         if: inputs.action == 'apply'
         working-directory: ${{ steps.vars.outputs.WORKDIR }}
         run: terraform apply -auto-approve
-
-      - name: Terraform destroy
-        if: inputs.action == 'destroy'
-        working-directory: ${{ steps.vars.outputs.WORKDIR }}
-        run: terraform destroy -auto-approve
