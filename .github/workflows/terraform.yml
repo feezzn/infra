@@ -106,7 +106,7 @@ jobs:
         run: terraform validate
 
       - name: Terraform plan (save)
-        run: terraform plan -out=tfplan -no-color
+        run: terraform plan -out=tfplan -no-color -input=false -lock-timeout=5m
 
       - name: Upload tfplan
         uses: actions/upload-artifact@v4
@@ -254,9 +254,9 @@ jobs:
 
       - name: Terraform plan
         working-directory: ${{ steps.vars.outputs.WORKDIR }}
-        run: terraform plan -no-color
+        run: terraform plan -no-color -lock-timeout=5m
 
       - name: Terraform apply
         if: inputs.action == 'apply'
         working-directory: ${{ steps.vars.outputs.WORKDIR }}
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -lock-timeout=5m

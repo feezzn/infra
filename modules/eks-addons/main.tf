@@ -55,8 +55,11 @@ resource "kubernetes_service_account" "alb_controller" {
 resource "helm_release" "alb_controller" {
   name       = "aws-load-balancer-controller"
   namespace  = local.alb_sa_namespace
+  wait    = false
+  timeout = 300
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
+  
 
   depends_on = [kubernetes_service_account.alb_controller]
 
