@@ -140,19 +140,19 @@ jobs:
         run: terraform fmt -check -recursive
 
       - name: Terraform init
-        run: terraform -chdir=environments/dev init -reconfigure
+        run: terraform -chdir=environments/prod init -reconfigure
 
       - name: Terraform validate
-        run: terraform -chdir=environments/dev validate
+        run: terraform -chdir=environments/prod validate
 
       - name: Terraform plan (save)
-        run: terraform -chdir=environments/dev plan -out=tfplan -no-color -input=false -lock-timeout=5m
+        run: terraform -chdir=environments/prod plan -out=tfplan -no-color -input=false -lock-timeout=5m
 
       - name: Upload tfplan
         uses: actions/upload-artifact@v4
         with:
-          name: dev-tfplan
-          path: environments/dev/tfplan
+          name: prod-tfplan
+          path: environments/prod/tfplan
           if-no-files-found: error
 
           # loucuras acontecem por aqui
