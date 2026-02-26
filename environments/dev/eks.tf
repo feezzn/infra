@@ -51,7 +51,7 @@ module "eks" {
 
   eks_managed_node_groups = {
     default = {
-      name           = "eks-machine"
+      name           = "dev-eks"
       instance_types = ["t3.small"]
 
       min_size     = 1
