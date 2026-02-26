@@ -85,9 +85,6 @@ jobs:
     needs: changes
     if: github.event_name == 'push' && needs.changes.outputs.dev == 'true'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: environments/dev
     steps:
       - uses: actions/checkout@v4
 
@@ -102,16 +99,15 @@ jobs:
 
       - name: Terraform fmt
         run: terraform fmt -check -recursive
-        working-directory: .
 
       - name: Terraform init
-        run: terraform init -reconfigure
+        run: terraform -chdir=environments/dev init -reconfigure
 
       - name: Terraform validate
-        run: terraform validate
+        run: terraform -chdir=environments/dev validate
 
       - name: Terraform plan (save)
-        run: terraform plan -out=tfplan -no-color -input=false -lock-timeout=5m
+        run: terraform -chdir=environments/dev plan -out=tfplan -no-color -input=false -lock-timeout=5m
 
       - name: Upload tfplan
         uses: actions/upload-artifact@v4
@@ -140,20 +136,23 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
+
       - name: Terraform init
-        run: terraform init -reconfigure
+        run: terraform -chdir=environments/dev init -reconfigure
 
       - name: Terraform validate
-        run: terraform validate
+        run: terraform -chdir=environments/dev validate
 
       - name: Terraform plan (save)
-        run: terraform plan -out=tfplan -no-color -input=false -lock-timeout=5m
+        run: terraform -chdir=environments/dev plan -out=tfplan -no-color -input=false -lock-timeout=5m
 
       - name: Upload tfplan
         uses: actions/upload-artifact@v4
         with:
-          name: prod-tfplan
-          path: environments/prod/tfplan
+          name: dev-tfplan
+          path: environments/dev/tfplan
           if-no-files-found: error
 
           # loucuras acontecem por aqui
@@ -177,20 +176,23 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
+
       - name: Terraform init
-        run: terraform init -reconfigure
+        run: terraform -chdir=environments/dev init -reconfigure
 
       - name: Terraform validate
-        run: terraform validate
+        run: terraform -chdir=environments/dev validate
 
       - name: Terraform plan (save)
-        run: terraform plan -out=tfplan -no-color -input=false -lock-timeout=5m
+        run: terraform -chdir=environments/dev plan -out=tfplan -no-color -input=false -lock-timeout=5m
 
       - name: Upload tfplan
         uses: actions/upload-artifact@v4
         with:
-          name: global-tfplan
-          path: environments/global/tfplan
+          name: dev-tfplan
+          path: environments/dev/tfplan
           if-no-files-found: error
 
   # -----------------------------
