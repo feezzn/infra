@@ -1,5 +1,7 @@
 locals {
-  oidc_hostpath = replace(var.oidc_issuer_url, "https://", "")
+  alb_sa_namespace = "kube-system"
+  alb_sa_name      = "aws-load-balancer-controller"
+  oidc_hostpath    = replace(var.oidc_issuer_url, "https://", "")
 }
 
 resource "aws_iam_policy" "alb_controller" {
