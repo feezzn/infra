@@ -25,6 +25,11 @@ on:
         options:
           - apply
           - destroy
+          - unlock
+      lock_id:
+        description: 'Terraform lock ID (only for unlock)'
+        required: false
+        type: string
 
 permissions:
   id-token: write
@@ -142,7 +147,7 @@ jobs:
         run: terraform validate
 
       - name: Terraform plan (save)
-        run: terraform plan -out=tfplan -no-color
+        run: terraform plan -out=tfplan -no-color -input=false -lock-timeout=5m
 
       - name: Upload tfplan
         uses: actions/upload-artifact@v4
@@ -179,7 +184,7 @@ jobs:
         run: terraform validate
 
       - name: Terraform plan (save)
-        run: terraform plan -out=tfplan -no-color
+        run: terraform plan -out=tfplan -no-color -input=false -lock-timeout=5m
 
       - name: Upload tfplan
         uses: actions/upload-artifact@v4
@@ -244,19 +249,22 @@ jobs:
         working-directory: ${{ steps.vars.outputs.WORKDIR }}
         run: terraform init -upgrade -reconfigure
 
-      - name: Upload lockfile (debug)
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ inputs.environment }}-lockfile
-          path: ${{ steps.vars.outputs.WORKDIR }}/.terraform.lock.hcl
-
-      # If APPLY: try to use last plan artifact (if it exists), otherwise just apply directly
+      - name: Terraform force-unlock
+        if: inputs.action == 'unlock'
+        working-directory: ${{ steps.vars.outputs.WORKDIR }}
+        run: terraform force-unlock -force "${{ inputs.lock_id }}"
 
       - name: Terraform plan
+        if: inputs.action != 'unlock'
         working-directory: ${{ steps.vars.outputs.WORKDIR }}
-        run: terraform plan -no-color -lock-timeout=5m
+        run: terraform plan -no-color -input=false -lock-timeout=5m
 
       - name: Terraform apply
         if: inputs.action == 'apply'
         working-directory: ${{ steps.vars.outputs.WORKDIR }}
         run: terraform apply -auto-approve -lock-timeout=5m
+
+      - name: Terraform destroy
+        if: inputs.action == 'destroy'
+        working-directory: ${{ steps.vars.outputs.WORKDIR }}
+        run: terraform destroy -auto-approve -lock-timeout=5m
