@@ -19,17 +19,14 @@ data "aws_iam_policy_document" "alb_irsa_assume_role" {
       identifiers = [var.oidc_provider_arn]
     }
 
-    actions = ["sts:AssumeRoleWithWebIdentity"]
-
     condition {
       test     = "StringEquals"
-      variable = "${local.oidc_hostpath}:sub"
-      values   = ["system:serviceaccount:${local.alb_sa_namespace}:${local.alb_sa_name}"]
+      variable = "${local.oidc_hostpath}:aud"
+      values   = ["sts.amazonaws.com"]
     }
   }
 }
 
-data "aws_caller_identity" "current" {}
 
 resource "aws_iam_role" "alb_controller" {
   name               = "eks-alb-controller"
