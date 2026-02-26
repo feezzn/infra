@@ -1,6 +1,5 @@
 locals {
-  alb_sa_namespace = "kube-system"
-  alb_sa_name      = "aws-load-balancer-controller"
+  oidc_hostpath = replace(var.oidc_issuer_url, "https://", "")
 }
 
 resource "aws_iam_policy" "alb_controller" {
@@ -22,7 +21,7 @@ data "aws_iam_policy_document" "alb_irsa_assume_role" {
 
     condition {
       test     = "StringEquals"
-      variable = "${replace(var.oidc_provider_arn, "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/", "")}:sub"
+      variable = "${local.oidc_hostpath}:sub"
       values   = ["system:serviceaccount:${local.alb_sa_namespace}:${local.alb_sa_name}"]
     }
   }
