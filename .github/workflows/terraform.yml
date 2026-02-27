@@ -70,6 +70,10 @@ jobs:
             dev:
               - "environments/dev/**"
               - "modules/**"
+            prod:
+              - "environments/prod/**"
+            global:
+              - "environments/global/**"
 
   # -----------------------------
   # PLAN jobs (on push only)
