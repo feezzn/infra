@@ -36,11 +36,9 @@ data "aws_iam_policy_document" "alb_irsa_assume_role" {
   }
 }
 
-
-resource "aws_iam_policy" "alb_controller" {
-  name        = "AWSLoadBalancerControllerIAMPolicy-${var.cluster_name}"
-  description = "IAM policy for AWS Load Balancer Controller"
-  policy      = file("${path.module}/alb_iam_policy.json")
+resource "aws_iam_role" "alb_controller" {
+  name               = "eks-alb-controller-${var.cluster_name}"
+  assume_role_policy = data.aws_iam_policy_document.alb_irsa_assume_role.json
 }
 
 resource "aws_iam_role_policy_attachment" "alb_attach" {
@@ -62,12 +60,10 @@ resource "kubernetes_service_account" "alb_controller" {
 resource "helm_release" "alb_controller" {
   name       = "aws-load-balancer-controller"
   namespace  = local.alb_sa_namespace
-  wait       = false
-  timeout    = 300
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
-
-
+  wait       = false
+  timeout    = 300
   depends_on = [kubernetes_service_account.alb_controller]
 
   set {
