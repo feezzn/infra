@@ -5,18 +5,25 @@ locals {
 }
 
 resource "aws_iam_policy" "alb_controller" {
-  name        = "AWSLoadBalancerControllerIAMPolicy"
+  name        = "AWSLoadBalancerControllerIAMPolicy-${var.cluster_name}"
   description = "IAM policy for AWS Load Balancer Controller"
   policy      = file("${path.module}/alb_iam_policy.json")
 }
 
 data "aws_iam_policy_document" "alb_irsa_assume_role" {
   statement {
-    effect = "Allow"
+    effect  = "Allow"
+    actions = ["sts:AssumeRoleWithWebIdentity"]
 
-    principals {
+    principal {
       type        = "Federated"
       identifiers = [var.oidc_provider_arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${local.oidc_hostpath}:sub"
+      values   = ["system:serviceaccount:${local.alb_sa_namespace}:${local.alb_sa_name}"]
     }
 
     condition {
