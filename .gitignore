@@ -14,7 +14,8 @@ aws/dist/
 **/dist/
 awscliv2.zip
 ssm-plugin.*
-tf.sh
+tf.sh*
+tcfc*
 k.sh
 AccessKey
 *.local.sh
