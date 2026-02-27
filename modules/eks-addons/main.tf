@@ -15,7 +15,7 @@ data "aws_iam_policy_document" "alb_irsa_assume_role" {
     effect  = "Allow"
     actions = ["sts:AssumeRoleWithWebIdentity"]
 
-    principal {
+    principals {
       type        = "Federated"
       identifiers = [var.oidc_provider_arn]
     }
