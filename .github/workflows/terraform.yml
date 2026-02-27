@@ -14,18 +14,12 @@ on:
         description: 'Which environment?'
         required: true
         type: choice
-        options:
-          - dev
-          - prod
-          - global
+        options: [dev, prod, global]
       action:
         description: 'What to run?'
         required: true
         type: choice
-        options:
-          - apply
-          - destroy
-          - unlock
+        options: [apply, destroy, unlock]
       lock_id:
         description: 'Terraform lock ID (only for unlock)'
         required: false
@@ -72,17 +66,22 @@ jobs:
               - "modules/**"
             prod:
               - "environments/prod/**"
+              - "modules/**"
             global:
               - "environments/global/**"
+              - "modules/**"
 
-  # -----------------------------
-  # PLAN jobs (on push only)
-  # -----------------------------
   dev-plan:
     name: Dev - Plan
     needs: changes
     if: github.event_name == 'push' && needs.changes.outputs.dev == 'true'
     runs-on: ubuntu-latest
+    concurrency:
+      group: terraform-dev
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: environments/dev
     steps:
       - uses: actions/checkout@v4
 
@@ -96,16 +95,16 @@ jobs:
         uses: hashicorp/setup-terraform@v3
 
       - name: Terraform fmt
-        run: terraform fmt -check -recursive
+        run: terraform fmt -check -recursive ../..
 
       - name: Terraform init
-        run: terraform -chdir=environments/dev init -reconfigure
+        run: terraform init -reconfigure
 
       - name: Terraform validate
-        run: terraform -chdir=environments/dev validate
+        run: terraform validate
 
       - name: Terraform plan (save)
-        run: terraform -chdir=environments/dev plan -out=tfplan -no-color -input=false -lock-timeout=5m
+        run: terraform plan -out=tfplan -no-color -input=false -lock-timeout=5m
 
       - name: Upload tfplan
         uses: actions/upload-artifact@v4
@@ -119,6 +118,9 @@ jobs:
     needs: changes
     if: github.event_name == 'push' && needs.changes.outputs.prod == 'true'
     runs-on: ubuntu-latest
+    concurrency:
+      group: terraform-prod
+      cancel-in-progress: false
     defaults:
       run:
         working-directory: environments/prod
@@ -135,16 +137,16 @@ jobs:
         uses: hashicorp/setup-terraform@v3
 
       - name: Terraform fmt
-        run: terraform fmt -check -recursive
+        run: terraform fmt -check -recursive ../..
 
       - name: Terraform init
-        run: terraform -chdir=environments/prod init -reconfigure
+        run: terraform init -reconfigure
 
       - name: Terraform validate
-        run: terraform -chdir=environments/prod validate
+        run: terraform validate
 
       - name: Terraform plan (save)
-        run: terraform -chdir=environments/prod plan -out=tfplan -no-color -input=false -lock-timeout=5m
+        run: terraform plan -out=tfplan -no-color -input=false -lock-timeout=5m
 
       - name: Upload tfplan
         uses: actions/upload-artifact@v4
@@ -153,12 +155,14 @@ jobs:
           path: environments/prod/tfplan
           if-no-files-found: error
 
-          # loucuras acontecem por aqui
   global-plan:
     name: Global - Plan
     needs: changes
     if: github.event_name == 'push' && needs.changes.outputs.global == 'true'
     runs-on: ubuntu-latest
+    concurrency:
+      group: terraform-global
+      cancel-in-progress: false
     defaults:
       run:
         working-directory: environments/global
@@ -175,16 +179,16 @@ jobs:
         uses: hashicorp/setup-terraform@v3
 
       - name: Terraform fmt
-        run: terraform fmt -check -recursive
+        run: terraform fmt -check -recursive ../..
 
       - name: Terraform init
-        run: terraform -chdir=environments/global init -reconfigure
+        run: terraform init -reconfigure
 
       - name: Terraform validate
-        run: terraform -chdir=environments/global validate
+        run: terraform validate
 
       - name: Terraform plan (save)
-        run: terraform -chdir=environments/global plan -out=tfplan -no-color -input=false -lock-timeout=5m
+        run: terraform plan -out=tfplan -no-color -input=false -lock-timeout=5m
 
       - name: Upload tfplan
         uses: actions/upload-artifact@v4
@@ -193,18 +197,13 @@ jobs:
           path: environments/global/tfplan
           if-no-files-found: error
 
-  # -----------------------------
-  # APPLY / DESTROY (manual only)
-  # -----------------------------
   run:
     name: Manual - ${{ inputs.action }} (${{ inputs.environment }})
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
 
-    # 🔐 This triggers GitHub Environment approvals (dev/prod/global)
     environment: ${{ inputs.environment }}
 
-    # 🚦 Prevent concurrent state mutations per environment
     concurrency:
       group: terraform-${{ inputs.environment }}
       cancel-in-progress: false
@@ -217,23 +216,14 @@ jobs:
         shell: bash
         run: |
           if [ "${{ inputs.environment }}" = "dev" ]; then
-          {
-          echo "WORKDIR=environments/dev"
-          echo "REGION=${{ env.AWS_REGION_DEV }}"
-          echo "TFPLAN=dev-tfplan"
-          } >> "$GITHUB_OUTPUT"
+            echo "WORKDIR=environments/dev" >> "$GITHUB_OUTPUT"
+            echo "REGION=${{ env.AWS_REGION_DEV }}" >> "$GITHUB_OUTPUT"
           elif [ "${{ inputs.environment }}" = "prod" ]; then
-          {
-          echo "WORKDIR=environments/prod"
-          echo "REGION=${{ env.AWS_REGION_PROD }}"
-          echo "TFPLAN=prod-tfplan"
-          } >> "$GITHUB_OUTPUT"
+            echo "WORKDIR=environments/prod" >> "$GITHUB_OUTPUT"
+            echo "REGION=${{ env.AWS_REGION_PROD }}" >> "$GITHUB_OUTPUT"
           else
-          {
-          echo "WORKDIR=environments/global"
-          echo "REGION=${{ env.AWS_REGION_GLOBAL }}"
-          echo "TFPLAN=global-tfplan"
-          } >> "$GITHUB_OUTPUT"
+            echo "WORKDIR=environments/global" >> "$GITHUB_OUTPUT"
+            echo "REGION=${{ env.AWS_REGION_GLOBAL }}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Configure AWS credentials (OIDC)
@@ -245,9 +235,18 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      - name: Terraform init (upgrade providers)
+      - name: Terraform init
         working-directory: ${{ steps.vars.outputs.WORKDIR }}
         run: terraform init -upgrade -reconfigure
+
+      - name: Ensure lock_id is provided (unlock)
+        if: inputs.action == 'unlock'
+        shell: bash
+        run: |
+          if [ -z "${{ inputs.lock_id }}" ]; then
+            echo "ERROR: lock_id is required when action=unlock"
+            exit 1
+          fi
 
       - name: Terraform force-unlock
         if: inputs.action == 'unlock'
