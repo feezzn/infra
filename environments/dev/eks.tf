@@ -35,15 +35,22 @@ module "eks" {
   endpoint_public_access_cidrs = ["0.0.0.0/0"]
 
   access_entries = {
-    ec2admin = {
-      principal_arn = "arn:aws:iam::660830512266:user/ec2admin"
-
+    cluster_creator = {
+      principal_arn = "arn:aws:iam::660830512266:role/iac-infra"
       policy_associations = {
         admin = {
-          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-          access_scope = {
-            type = "cluster"
-          }
+          policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = { type = "cluster" }
+        }
+      }
+    }
+
+    svc_admin = {
+      principal_arn = "arn:aws:iam::660830512266:user/svc_admin"
+      policy_associations = {
+        admin = {
+          policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = { type = "cluster" }
         }
       }
     }
