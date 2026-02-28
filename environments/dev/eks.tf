@@ -61,9 +61,9 @@ module "eks" {
       name           = "dev-eks"
       instance_types = ["t3.small"]
 
-      min_size     = 2
-      max_size     = 3
-      desired_size = 2
+      min_size     = 1
+      max_size     = 1
+      desired_size = 1
 
       subnet_ids = [
         "subnet-09c1b57ce0a14dc7f",
