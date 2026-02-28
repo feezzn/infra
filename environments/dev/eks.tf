@@ -63,7 +63,7 @@ module "eks" {
 
       min_size     = 1
       max_size     = 2
-      desired_size = 1
+      desired_size = 2
 
       subnet_ids = [
         "subnet-09c1b57ce0a14dc7f",
