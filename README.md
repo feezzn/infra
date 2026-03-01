@@ -148,6 +148,13 @@ flowchart TB
 
 ---
 
+## 🔗 Related Repositories
+
+- Infrastructure (Terraform): `myapp`
+- Application (Helm chart): `infra-gitops`
+
+---
+
 ## 👨‍💻 Author
 
 Felipe  

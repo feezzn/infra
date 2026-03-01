@@ -72,7 +72,7 @@ module "eks" {
 
       metadata_options = {
         http_endpoint = "enabled"
-        http_tokens   = "optional" # depois você pode endurecer pra "required"
+        http_tokens   = "required" # depois você pode endurecer pra "required"
       }
       iam_role_additional_policies = {
         AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
