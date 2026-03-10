@@ -1,0 +1,81 @@
+name: Infra CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment'
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+          - global
+
+      action:
+        description: 'Terraform action'
+        required: true
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION_DEV: us-east-2
+  AWS_REGION_PROD: us-east-1
+  AWS_REGION_GLOBAL: us-east-1
+
+jobs:
+  terraform:
+    name: Terraform ${{ inputs.action }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set environment vars
+        id: vars
+        run: |
+          if [ "${{ inputs.environment }}" = "dev" ]; then
+            echo "WORKDIR=environments/dev" >> $GITHUB_OUTPUT
+            echo "REGION=${{ env.AWS_REGION_DEV }}" >> $GITHUB_OUTPUT
+          elif [ "${{ inputs.environment }}" = "prod" ]; then
+            echo "WORKDIR=environments/prod" >> $GITHUB_OUTPUT
+            echo "REGION=${{ env.AWS_REGION_PROD }}" >> $GITHUB_OUTPUT
+          else
+            echo "WORKDIR=environments/global" >> $GITHUB_OUTPUT
+            echo "REGION=${{ env.AWS_REGION_GLOBAL }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::660830512266:role/iac-infra
+          aws-region: ${{ steps.vars.outputs.REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init
+        working-directory: ${{ steps.vars.outputs.WORKDIR }}
+        run: terraform init -upgrade -reconfigure
+
+      - name: Terraform plan
+        if: inputs.action == 'plan'
+        working-directory: ${{ steps.vars.outputs.WORKDIR }}
+        run: terraform plan
+
+      - name: Terraform apply
+        if: inputs.action == 'apply'
+        working-directory: ${{ steps.vars.outputs.WORKDIR }}
+        run: terraform apply -auto-approve
+
+      - name: Terraform destroy
+        if: inputs.action == 'destroy'
+        working-directory: ${{ steps.vars.outputs.WORKDIR }}
+        run: terraform destroy -auto-approve

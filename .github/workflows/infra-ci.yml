@@ -1,0 +1,45 @@
+name: Infra CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'environments/**'
+      - 'modules/**'
+      - '.github/workflows/**'
+
+  pull_request:
+
+jobs:
+  lint-actions:
+    name: Lint GitHub Actions
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install actionlint
+        run: |
+          curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash
+
+      - name: Run actionlint
+        run: ./actionlint
+
+  terraform-check:
+    name: Terraform Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init (local)
+        run: terraform init -backend=false
+
+      - name: Terraform validate
+        run: terraform validate
