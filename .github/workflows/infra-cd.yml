@@ -40,16 +40,17 @@ jobs:
 
       - name: Set environment vars
         id: vars
+        shell: bash
         run: |
           if [ "${{ inputs.environment }}" = "dev" ]; then
-            echo "WORKDIR=environments/dev" >> $GITHUB_OUTPUT
-            echo "REGION=${{ env.AWS_REGION_DEV }}" >> $GITHUB_OUTPUT
+            echo "WORKDIR=environments/dev" >> "$GITHUB_OUTPUT"
+            echo "REGION=${{ env.AWS_REGION_DEV }}" >> "$GITHUB_OUTPUT"
           elif [ "${{ inputs.environment }}" = "prod" ]; then
-            echo "WORKDIR=environments/prod" >> $GITHUB_OUTPUT
-            echo "REGION=${{ env.AWS_REGION_PROD }}" >> $GITHUB_OUTPUT
+            echo "WORKDIR=environments/prod" >> "$GITHUB_OUTPUT"
+            echo "REGION=${{ env.AWS_REGION_PROD }}" >> "$GITHUB_OUTPUT"
           else
-            echo "WORKDIR=environments/global" >> $GITHUB_OUTPUT
-            echo "REGION=${{ env.AWS_REGION_GLOBAL }}" >> $GITHUB_OUTPUT
+            echo "WORKDIR=environments/global" >> "$GITHUB_OUTPUT"
+            echo "REGION=${{ env.AWS_REGION_GLOBAL }}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Configure AWS credentials
