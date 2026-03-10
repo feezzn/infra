@@ -1,6 +1,6 @@
-![Infra CI](https://github.com/SEUUSER/SEUREPO/actions/workflows/infra-ci.yml/badge.svg)
+![Infra CI](https://github.com/feezzn/infra/actions/workflows/infra-ci.yml/badge.svg)
 
-![Infra CD](https://github.com/SEUUSER/SEUREPO/actions/workflows/infra-cd.yml/badge.svg)
+![Infra CD](https://github.com/feezzn/infra/actions/workflows/infra-cd.yml/badge.svg)
 
 # ☁️ AWS Infrastructure — Terraform + EKS + GitHub OIDC
 
