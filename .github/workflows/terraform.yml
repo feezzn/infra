@@ -40,9 +40,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Install actionlint
         run: |
           curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash
+
       - name: Run actionlint
         run: ./actionlint
 
@@ -56,6 +58,7 @@ jobs:
       global: ${{ steps.filter.outputs.global }}
     steps:
       - uses: actions/checkout@v4
+
       - name: Paths filter
         id: filter
         uses: dorny/paths-filter@v3
@@ -71,139 +74,80 @@ jobs:
               - "environments/global/**"
               - "modules/**"
 
-  dev-plan:
-    name: Dev - Plan
+  dev-check:
+    name: Dev - Check
     needs: changes
     if: github.event_name == 'push' && needs.changes.outputs.dev == 'true'
     runs-on: ubuntu-latest
-    concurrency:
-      group: terraform-dev
-      cancel-in-progress: false
     defaults:
       run:
         working-directory: environments/dev
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::660830512266:role/iac-infra
-          aws-region: ${{ env.AWS_REGION_DEV }}
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
       - name: Terraform fmt
         run: terraform fmt -check -recursive ../..
 
-      - name: Terraform init
-        run: terraform init -reconfigure
+      - name: Terraform init (no backend)
+        run: terraform init -backend=false
 
       - name: Terraform validate
         run: terraform validate
 
-      - name: Terraform plan (save)
-        run: terraform plan -out=tfplan -no-color -input=false -lock-timeout=5m
-
-      - name: Upload tfplan
-        uses: actions/upload-artifact@v4
-        with:
-          name: dev-tfplan
-          path: environments/dev/tfplan
-          if-no-files-found: error
-
-  prod-plan:
-    name: Prod - Plan
+  prod-check:
+    name: Prod - Check
     needs: changes
     if: github.event_name == 'push' && needs.changes.outputs.prod == 'true'
     runs-on: ubuntu-latest
-    concurrency:
-      group: terraform-prod
-      cancel-in-progress: false
     defaults:
       run:
         working-directory: environments/prod
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::660830512266:role/iac-infra
-          aws-region: ${{ env.AWS_REGION_PROD }}
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
       - name: Terraform fmt
         run: terraform fmt -check -recursive ../..
 
-      - name: Terraform init
-        run: terraform init -reconfigure
+      - name: Terraform init (no backend)
+        run: terraform init -backend=false
 
       - name: Terraform validate
         run: terraform validate
 
-      - name: Terraform plan (save)
-        run: terraform plan -out=tfplan -no-color -input=false -lock-timeout=5m
-
-      - name: Upload tfplan
-        uses: actions/upload-artifact@v4
-        with:
-          name: prod-tfplan
-          path: environments/prod/tfplan
-          if-no-files-found: error
-
-  global-plan:
-    name: Global - Plan
+  global-check:
+    name: Global - Check
     needs: changes
     if: github.event_name == 'push' && needs.changes.outputs.global == 'true'
     runs-on: ubuntu-latest
-    concurrency:
-      group: terraform-global
-      cancel-in-progress: false
     defaults:
       run:
         working-directory: environments/global
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::660830512266:role/iac-infra
-          aws-region: ${{ env.AWS_REGION_GLOBAL }}
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
       - name: Terraform fmt
         run: terraform fmt -check -recursive ../..
 
-      - name: Terraform init
-        run: terraform init -reconfigure
+      - name: Terraform init (no backend)
+        run: terraform init -backend=false
 
       - name: Terraform validate
         run: terraform validate
-
-      - name: Terraform plan (save)
-        run: terraform plan -out=tfplan -no-color -input=false -lock-timeout=5m
-
-      - name: Upload tfplan
-        uses: actions/upload-artifact@v4
-        with:
-          name: global-tfplan
-          path: environments/global/tfplan
-          if-no-files-found: error
 
   run:
     name: Manual - ${{ inputs.action }} (${{ inputs.environment }})
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-
     environment: ${{ inputs.environment }}
-
     concurrency:
       group: terraform-${{ inputs.environment }}
       cancel-in-progress: false
