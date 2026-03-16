@@ -1,0 +1,34 @@
+# tfsec configuration — soft mode for adoption phase
+# This file disables some rules to allow gradual adoption.
+# Move rules to "soft_deprecations" as you address them; eventually all go to "hard_rules"
+
+# Soft mode: for branches other than main
+soft:
+  rules:
+    # Networking / Public exposure (usually safe in dev)
+    - aws-s3-enable-public-access-block  # S3 public access
+    - aws-s3-enable-bucket-versioning     # S3 versioning
+    
+    # Logging (nice-to-have but not critical in dev)
+    - aws-vpc-flow-log-missing
+    - aws-elb-logging-enabled
+    - aws-s3-access-logging
+    
+    # Encryption (critical but we'll enforce on prod)
+    - aws-kms-key-rotation-enabled
+    - aws-ec2-encryption-by-default
+    
+    # IAM / Auth
+    - aws-iam-require-mfa-for-api-access
+
+# Hard rules: critical even in dev (never disable)
+hard_rules:
+  - aws-s3-enable-bucket-public-access-block
+  - aws-iam-no-inline-policies
+  - aws-iam-password-expiry-enabled
+
+# Exclude paths (test/local files)
+exclude_paths:
+  - tf*
+  - .terraform/**
+  - test/**
