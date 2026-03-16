@@ -1,0 +1,13 @@
+module "airflow_data_platform" {
+  source = "../../modules/mwaa"
+
+  name                  = "data-platform"
+  airflow_version       = "2.10.3"
+  environment_class     = "mw1.small"
+  min_workers           = 1
+  max_workers           = 3
+  dag_s3_path           = "dags"
+  requirements_s3_path  = "requirements/requirements.txt"
+  subnet_ids            = module.vpc.private_subnet_ids
+  security_group_ids    = [module.sg_ec2.id]
+}
