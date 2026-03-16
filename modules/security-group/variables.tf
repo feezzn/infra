@@ -2,10 +2,10 @@ variable "name" {}
 variable "vpc_id" {}
 variable "ingress_rules" {
   type = list(object({
-    from_port = number
-    to_port   = number
-    protocol  = string
-    cidr      = string
+    from_port   = number
+    to_port     = number
+    protocol    = string
+    cidr        = string
     description = optional(string)
   }))
 }

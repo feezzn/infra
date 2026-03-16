@@ -109,4 +109,4 @@ jobs:
         with:
           working_directory: environments/${{ matrix.environment }}
           format: sarif
-          additional_args: --config-file ../../.tfsec.yaml --tfvars-file terraform.tfvars
+          additional_args: --config-file .tfsec.yaml --tfvars-file environments/${{ matrix.environment }}/terraform.tfvars
