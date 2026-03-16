@@ -150,6 +150,22 @@ flowchart TB
 
 ---
 
+## 🧱 11. Service Onboarding Standard
+
+Padrão para incluir novos serviços com segurança e consistência:
+
+- Guia: `docs/service-onboarding-pattern.md`
+- Exemplo ECS: `docs/examples/services-ecs.tf.example`
+- Exemplo Airflow (MWAA): `docs/examples/services-airflow.tf.example`
+- Exemplo DB (DocumentDB): `docs/examples/services-db.tf.example`
+
+Perfis de lint Terraform:
+
+- `.tflint.soft.hcl` (adoção e evolução gradual)
+- `.tflint.strict.hcl` (rigor maior para branch `main`)
+
+---
+
 ## 🔗 Related Repositories
 
 - Infrastructure (Terraform): `myapp`

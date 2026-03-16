@@ -1,0 +1,11 @@
+module "documentdb_core" {
+  source = "../../modules/documentdb"
+
+  name_prefix         = "core"
+  instance_class      = "db.t3.medium"
+  instance_count      = 1
+  subnet_ids          = module.vpc.private_subnet_ids
+  security_group_ids  = [module.sg_ec2.id]
+  username_secret_arn = "arn:aws:secretsmanager:us-east-2:000000000000:secret:docdb-user"
+  password_secret_arn = "arn:aws:secretsmanager:us-east-2:000000000000:secret:docdb-pass"
+}

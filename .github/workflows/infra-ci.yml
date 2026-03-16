@@ -25,8 +25,8 @@ jobs:
       - name: Run actionlint
         run: ./actionlint
 
-  terraform-check:
-    name: Terraform Check
+  terraform-fmt:
+    name: Terraform Fmt
     runs-on: ubuntu-latest
 
     steps:
@@ -38,8 +38,70 @@ jobs:
       - name: Terraform fmt
         run: terraform fmt -check -recursive
 
+  terraform-validate:
+    name: Terraform Validate (${{ matrix.environment }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [dev, prod, global]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
       - name: Terraform init (local)
+        working-directory: environments/${{ matrix.environment }}
         run: terraform init -backend=false
 
       - name: Terraform validate
+        working-directory: environments/${{ matrix.environment }}
         run: terraform validate
+
+  tflint:
+    name: TFLint (${{ matrix.environment }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [dev, prod, global]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+
+      - name: Init TFLint
+        working-directory: environments/${{ matrix.environment }}
+        run: tflint --init --config=../../.tflint.soft.hcl
+
+      - name: Run TFLint (soft)
+        working-directory: environments/${{ matrix.environment }}
+        run: tflint --recursive --config=../../.tflint.soft.hcl
+
+      - name: Run TFLint (strict on main)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        working-directory: environments/${{ matrix.environment }}
+        run: tflint --recursive --config=../../.tflint.strict.hcl
+
+  tfsec:
+    name: tfsec (${{ matrix.environment }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [dev, prod, global]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run tfsec
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: environments/${{ matrix.environment }}
