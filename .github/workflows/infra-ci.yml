@@ -11,6 +11,39 @@ on:
   pull_request:
 
 jobs:
+  changed-files:
+    name: Detect Changed Files
+    runs-on: ubuntu-latest
+    outputs:
+      dev: ${{ steps.filter.outputs.dev }}
+      prod: ${{ steps.filter.outputs.prod }}
+      global: ${{ steps.filter.outputs.global }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            dev:
+              - 'environments/dev/**'
+              - 'modules/**'
+              - '.tflint.*'
+              - '.tfsec.yaml'
+            prod:
+              - 'environments/prod/**'
+              - 'modules/**'
+              - '.tflint.*'
+              - '.tfsec.yaml'
+            global:
+              - 'environments/global/**'
+              - 'modules/**'
+              - '.tflint.*'
+              - '.tfsec.yaml'
+
   lint-actions:
     name: Lint GitHub Actions
     runs-on: ubuntu-latest
@@ -40,11 +73,17 @@ jobs:
 
   terraform-validate:
     name: Terraform Validate (${{ matrix.environment }})
+    needs: changed-files
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         environment: [dev, prod, global]
+
+    if: |
+      needs.changed-files.outputs.dev == 'true' ||
+      needs.changed-files.outputs.prod == 'true' ||
+      needs.changed-files.outputs.global == 'true'
 
     steps:
       - uses: actions/checkout@v4
@@ -62,11 +101,17 @@ jobs:
 
   tflint:
     name: TFLint (${{ matrix.environment }})
+    needs: changed-files
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         environment: [dev, prod, global]
+
+    if: |
+      needs.changed-files.outputs.dev == 'true' ||
+      needs.changed-files.outputs.prod == 'true' ||
+      needs.changed-files.outputs.global == 'true'
 
     steps:
       - uses: actions/checkout@v4
@@ -95,11 +140,17 @@ jobs:
 
   tfsec:
     name: tfsec (${{ matrix.environment }})
+    needs: changed-files
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         environment: [dev, prod, global]
+
+    if: |
+      needs.changed-files.outputs.dev == 'true' ||
+      needs.changed-files.outputs.prod == 'true' ||
+      needs.changed-files.outputs.global == 'true'
 
     steps:
       - uses: actions/checkout@v4
