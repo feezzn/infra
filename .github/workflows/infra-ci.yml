@@ -22,9 +22,8 @@ jobs:
     name: Detect Changed Files
     runs-on: ubuntu-latest
     outputs:
-      dev: ${{ steps.filter.outputs.dev }}
-      prod: ${{ steps.filter.outputs.prod }}
-      global: ${{ steps.filter.outputs.global }}
+      matrix: ${{ steps.build-matrix.outputs.matrix }}
+      has_changes: ${{ steps.build-matrix.outputs.has_changes }}
 
     steps:
       - uses: actions/checkout@v4
@@ -50,6 +49,30 @@ jobs:
               - 'modules/**'
               - '.tflint.*'
               - '.tfsec.yaml'
+
+      - name: Build changed environment matrix
+        id: build-matrix
+        run: |
+          envs=()
+
+          if [ "${{ steps.filter.outputs.dev }}" = "true" ]; then
+            envs+=("dev")
+          fi
+          if [ "${{ steps.filter.outputs.prod }}" = "true" ]; then
+            envs+=("prod")
+          fi
+          if [ "${{ steps.filter.outputs.global }}" = "true" ]; then
+            envs+=("global")
+          fi
+
+          if [ ${#envs[@]} -eq 0 ]; then
+            echo 'matrix=[]' >> "$GITHUB_OUTPUT"
+            echo 'has_changes=false' >> "$GITHUB_OUTPUT"
+          else
+            matrix_json=$(printf '%s\n' "${envs[@]}" | jq -R . | jq -s -c .)
+            echo "matrix=$matrix_json" >> "$GITHUB_OUTPUT"
+            echo 'has_changes=true' >> "$GITHUB_OUTPUT"
+          fi
 
   lint-actions:
     name: Lint GitHub Actions
@@ -85,12 +108,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        environment: [dev, prod, global]
+        environment: ${{ fromJSON(needs.changed-files.outputs.matrix) }}
 
-    if: |
-      needs.changed-files.outputs.dev == 'true' ||
-      needs.changed-files.outputs.prod == 'true' ||
-      needs.changed-files.outputs.global == 'true'
+    if: needs.changed-files.outputs.has_changes == 'true'
 
     steps:
       - uses: actions/checkout@v4
@@ -113,12 +133,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        environment: [dev, prod, global]
+        environment: ${{ fromJSON(needs.changed-files.outputs.matrix) }}
 
-    if: |
-      needs.changed-files.outputs.dev == 'true' ||
-      needs.changed-files.outputs.prod == 'true' ||
-      needs.changed-files.outputs.global == 'true'
+    if: needs.changed-files.outputs.has_changes == 'true'
 
     steps:
       - uses: actions/checkout@v4
@@ -152,12 +169,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        environment: [dev, prod, global]
+        environment: ${{ fromJSON(needs.changed-files.outputs.matrix) }}
 
-    if: |
-      needs.changed-files.outputs.dev == 'true' ||
-      needs.changed-files.outputs.prod == 'true' ||
-      needs.changed-files.outputs.global == 'true'
+    if: needs.changed-files.outputs.has_changes == 'true'
 
     steps:
       - uses: actions/checkout@v4
