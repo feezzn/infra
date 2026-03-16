@@ -79,6 +79,9 @@ jobs:
 
       - name: Init TFLint
         working-directory: environments/${{ matrix.environment }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: tflint --init --config=../../.tflint.soft.hcl
 
       - name: Run TFLint (soft)
@@ -105,3 +108,5 @@ jobs:
         uses: aquasecurity/tfsec-action@v1.0.3
         with:
           working_directory: environments/${{ matrix.environment }}
+          format: sarif
+          additional_args: --config-file .tfsec.yaml --tfvars-file environments/${{ matrix.environment }}/terraform.tfvars

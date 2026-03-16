@@ -1,0 +1,10 @@
+exclude:
+  - aws-ec2-no-public-egress-sgr
+  - aws-ec2-no-public-ip-subnet
+  - aws-ec2-require-vpc-flow-logs-for-all-vpcs
+  - aws-s3-enable-bucket-logging
+
+exclude_paths:
+  - .terraform/**
+  - tf*
+  - test/**

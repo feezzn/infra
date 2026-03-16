@@ -130,6 +130,7 @@ resource "aws_security_group" "vpc_endpoints" {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
+    description = "Allow HTTPS from VPC CIDR"
     cidr_blocks = [aws_vpc.this.cidr_block]
   }
 
@@ -137,6 +138,7 @@ resource "aws_security_group" "vpc_endpoints" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
+    description = "Allow outbound to required services"
     cidr_blocks = ["0.0.0.0/0"]
   }
 

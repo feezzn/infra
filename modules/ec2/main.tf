@@ -55,6 +55,10 @@ EOF
     http_tokens = "required"
   }
 
+  root_block_device {
+    encrypted = true
+  }
+
   tags = merge(var.tags, {
     Name = var.name
   })
