@@ -2,7 +2,7 @@
 terraform {
   backend "s3" {
     bucket         = "felipe-tfstate-660830512266-v2"
-    key            = "dev/terraform.tfstate"
+    key            = "global/terraform.tfstate"
     region         = "us-east-1"
     dynamodb_table = "terraform-locks-v2"
     encrypt        = true
@@ -11,15 +11,15 @@ terraform {
 
 #aqui já diz, é o provider e sua região
 provider "aws" {
-  region = "us-east-2"
+  region = "us-east-1"
 
   default_tags {
     tags = {
       Project     = "infra-iac"
-      Environment = "dev"
+      Environment = "global"
       Owner       = "Felipe"
       ManagedBy   = "Terraform"
-      CostCenter  = "dev"
+      CostCenter  = "global"
     }
   }
 }
