@@ -6,6 +6,7 @@ variable "ingress_rules" {
     to_port   = number
     protocol  = string
     cidr      = string
+    description = optional(string)
   }))
 }
 variable "tags" {

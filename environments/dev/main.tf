@@ -29,6 +29,36 @@ resource "aws_s3_bucket" "dev_bucket" {
   bucket = "felipe-dev-bucket-660830512266"
 }
 
+resource "aws_kms_key" "s3" {
+  description             = "KMS key for dev S3 bucket encryption"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+}
+
+resource "aws_kms_alias" "s3" {
+  name          = "alias/dev-s3-bucket"
+  target_key_id = aws_kms_key.s3.key_id
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "dev_bucket" {
+  bucket = aws_s3_bucket.dev_bucket.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      kms_master_key_id = aws_kms_key.s3.arn
+      sse_algorithm     = "aws:kms"
+    }
+    bucket_key_enabled = true
+  }
+}
+
+resource "aws_s3_bucket_versioning" "dev_bucket" {
+  bucket = aws_s3_bucket.dev_bucket.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 resource "aws_s3_bucket_public_access_block" "dev_bucket" {
   bucket = aws_s3_bucket.dev_bucket.id
 
