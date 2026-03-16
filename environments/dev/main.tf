@@ -11,7 +11,7 @@ terraform {
 
 #aqui já diz, é o provider e sua região
 provider "aws" {
-  region = "us-east-2"
+  region = var.region
 
   default_tags {
     tags = {
@@ -27,6 +27,15 @@ provider "aws" {
 # aqui são os recursos a serem criados.
 resource "aws_s3_bucket" "dev_bucket" {
   bucket = "felipe-dev-bucket-660830512266"
+}
+
+resource "aws_s3_bucket_public_access_block" "dev_bucket" {
+  bucket = aws_s3_bucket.dev_bucket.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
 
 module "vpc" {
