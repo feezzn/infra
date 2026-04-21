@@ -1,0 +1,338 @@
+# ============================================================
+# Kubernetes Manifests - Production Ready
+# ============================================================
+# These manifests are deployed AFTER the AKS cluster is created
+# They define pod-level security, resource quotas, and network policies
+# ============================================================
+
+---
+# ============================================================
+# NAMESPACES
+# ============================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: production
+  labels:
+    environment: production
+    pod-security.kubernetes.io/enforce: restricted
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    environment: monitoring
+
+---
+# ============================================================
+# RESOURCE QUOTAS (prevent resource starvation)
+# ============================================================
+
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: production-quota
+  namespace: production
+spec:
+  hard:
+    requests.cpu: '100' # Max 100 CPUs total
+    requests.memory: '200Gi' # Max 200GB RAM total
+    limits.cpu: '200' # Max 200 CPUs limits
+    limits.memory: '400Gi' # Max 400GB RAM limits
+    pods: '500' # Max 500 pods
+    services: '50'
+    persistentvolumeclaims: '20'
+
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: monitoring-quota
+  namespace: monitoring
+spec:
+  hard:
+    requests.cpu: '10'
+    requests.memory: '20Gi'
+    limits.cpu: '20'
+    limits.memory: '40Gi'
+    pods: '100'
+
+---
+# ============================================================
+# NETWORK POLICIES (pod-to-pod communication control)
+# ============================================================
+
+# Default DENY all ingress traffic (most restrictive)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: production
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+
+---
+# Allow ingress from ingress controller
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-from-ingress
+  namespace: production
+spec:
+  podSelector:
+    matchLabels:
+      role: app
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-basic
+      ports:
+        - protocol: TCP
+          port: 8080
+
+---
+# Allow pod-to-pod communication within namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: production
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+
+---
+# Allow DNS (required for pod communication)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: production
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+---
+# ============================================================
+# POD SECURITY POLICIES / POD SECURITY STANDARDS
+# ============================================================
+
+# For Kubernetes 1.25+, use Pod Security Standards instead of PSP
+apiVersion: v1
+kind: Pod
+metadata:
+  name: restricted-pod-example
+  namespace: production
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+
+  containers:
+    - name: app
+      image: myapp:latest
+      imagePullPolicy: Always
+
+      # Security context for container
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+            - ALL
+
+      # Resource limits (part of resource quotas enforcement)
+      resources:
+        requests:
+          cpu: '100m'
+          memory: '128Mi'
+        limits:
+          cpu: '500m'
+          memory: '512Mi'
+
+      # Liveness and readiness probes
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: 8080
+        initialDelaySeconds: 30
+        periodSeconds: 10
+
+      readinessProbe:
+        httpGet:
+          path: /ready
+          port: 8080
+        initialDelaySeconds: 5
+        periodSeconds: 5
+
+      # Volume mounts
+      volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /app/cache
+
+  volumes:
+    - name: tmp
+      emptyDir: {}
+    - name: cache
+      emptyDir: {}
+
+  # Pod disruption budget for high availability
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                    - myapp
+            topologyKey: kubernetes.io/hostname
+
+---
+# ============================================================
+# POD DISRUPTION BUDGET (for RBAC and HA)
+# ============================================================
+
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: app-pdb
+  namespace: production
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: myapp
+      tier: backend
+
+---
+# ============================================================
+# RBAC - ROLE (least privilege)
+# ============================================================
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: app-role
+  namespace: production
+rules:
+  # Minimal permissions for a typical app
+  - apiGroups: ['']
+    resources: ['configmaps', 'secrets']
+    verbs: ['get', 'list', 'watch']
+  - apiGroups: ['apps']
+    resources: ['deployments', 'statefulsets']
+    verbs: ['get', 'list']
+
+---
+# ============================================================
+# RBAC - ROLE BINDING
+# ============================================================
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: app-role-binding
+  namespace: production
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: app-role
+subjects:
+  - kind: ServiceAccount
+    name: app-sa
+    namespace: production
+
+---
+# ============================================================
+# SERVICE ACCOUNT (for pod RBAC)
+# ============================================================
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: app-sa
+  namespace: production
+automountServiceAccountToken: true
+
+---
+# ============================================================
+# MONITORING - PROMETHEUS SERVICEMONITOR (example)
+# ============================================================
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: app-monitor
+  namespace: production
+  labels:
+    app: myapp
+spec:
+  selector:
+    matchLabels:
+      app: myapp
+  endpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
+
+---
+# ============================================================
+# NETWORK POLICY - EGRESS (outbound strictness)
+# ============================================================
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: restrict-outbound
+  namespace: production
+spec:
+  podSelector:
+    matchLabels:
+      tier: backend
+  policyTypes:
+    - Egress
+  egress:
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+    # Allow to external APIs only through egress
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 169.254.169.254/32 # Block metadata service
+      ports:
+        - protocol: TCP
+          port: 443
