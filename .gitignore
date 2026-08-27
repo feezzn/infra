@@ -24,3 +24,20 @@ override.tf.json
 .DS_Store
 .idea/
 .vscode/
+
+# Credentials / local authentication
+AccessKey
+.env
+.env.*
+!.env.example
+
+# Local helper scripts / binaries / logs
+*.log
+logs/
+**/logs/
+
+# AWS CLI local artifacts
+aws/
+awscliv2.zip
+ssm-plugin.deb
+ssm-plugin.rpm
