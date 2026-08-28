@@ -1,11 +1,10 @@
 # aqui é para atrelar o state ao s3 e não local.
 terraform {
   backend "s3" {
-    bucket         = "felipe-tfstate-660830512266-v2"
-    key            = "dev/terraform.tfstate"
-    region         = "us-east-1"
-    dynamodb_table = "terraform-locks-v2"
-    encrypt        = true
+    key          = "dev/terraform.tfstate"
+    region       = "us-east-1"
+    encrypt      = true
+    use_lockfile = true
   }
 }
 

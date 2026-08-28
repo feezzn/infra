@@ -4,12 +4,6 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
-variable "lock_table_name" {
-  description = "Name of the DynamoDB table used for Terraform state locking."
-  type        = string
-  default     = "terraform-locks-v2"
-}
-
 variable "owner" {
   description = "Owner tag applied to bootstrap resources."
   type        = string
@@ -20,10 +14,9 @@ variable "project_name" {
   description = "Project tag applied to bootstrap resources."
   type        = string
   default     = "infra-iac"
-}
 
-variable "state_bucket_name" {
-  description = "Globally unique S3 bucket name used for Terraform remote state."
-  type        = string
-  default     = "felipe-tfstate-660830512266-v2"
+  validation {
+    condition     = can(regex("^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$", var.project_name))
+    error_message = "project_name must be lowercase alphanumeric with hyphens, start and end with an alphanumeric character, and be 3 to 50 characters long."
+  }
 }

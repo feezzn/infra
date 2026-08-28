@@ -1,4 +1,6 @@
 locals {
+  state_bucket_name = lower("${var.project_name}-${data.aws_caller_identity.current.account_id}-tfstate")
+
   common_tags = {
     Project     = var.project_name
     Environment = "bootstrap"
@@ -8,11 +10,13 @@ locals {
   }
 }
 
+data "aws_caller_identity" "current" {}
+
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = var.state_bucket_name
+  bucket = local.state_bucket_name
 
   tags = {
-    Name = var.state_bucket_name
+    Name = local.state_bucket_name
   }
 
   lifecycle {
@@ -83,31 +87,4 @@ data "aws_iam_policy_document" "terraform_state" {
 resource "aws_s3_bucket_policy" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
   policy = data.aws_iam_policy_document.terraform_state.json
-}
-
-resource "aws_dynamodb_table" "terraform_locks" {
-  name         = var.lock_table_name
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "LockID"
-
-  attribute {
-    name = "LockID"
-    type = "S"
-  }
-
-  point_in_time_recovery {
-    enabled = true
-  }
-
-  server_side_encryption {
-    enabled = true
-  }
-
-  tags = {
-    Name = var.lock_table_name
-  }
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
