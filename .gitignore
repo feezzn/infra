@@ -41,3 +41,7 @@ aws/
 awscliv2.zip
 ssm-plugin.deb
 ssm-plugin.rpm
+
+# Local environment
+.envrc
+**/.envrc
