@@ -13,12 +13,12 @@ Provisionamento e operação de infraestrutura AWS com **Terraform**, seguindo p
 Este repositório cria uma infra AWS do zero, incluindo:
 - **VPC** (subnets públicas/privadas, NAT Gateway, VPC Endpoints)
 - **EKS** (managed node groups)
-- **Terraform Remote State** (**S3 + DynamoDB**)
+- **Terraform Remote State** (**S3 + native S3 lockfile**)
 - **GitHub Actions com OIDC** (sem access keys long-lived)
 
 **Repo:** `feezzn/infra` (branch `main`)  
 **EKS (dev):** `us-east-2`  
-**Terraform backend:** S3 `felipe-tfstate-660830512266-v2` + DynamoDB `terraform-locks-v2` em `us-east-1`
+**Terraform backend:** S3 `<project_name>-<aws_account_id>-tfstate` com `use_lockfile = true` em `us-east-1`
 
 ---
 
@@ -43,7 +43,7 @@ flowchart LR
   GHA -->|OIDC token| AWS[AWS Account]
   AWS --> EKS[EKS Cluster]
   AWS --> S3[S3 Backend]
-  AWS --> DDB[DynamoDB Lock]
+  AWS --> S3Lock[S3 Native Lockfile]
 ```
 ### C4 — Level 2: Containers (Infrastructure View)
 
@@ -57,7 +57,7 @@ flowchart TB
   subgraph AWS2["AWS Account"]
     IAM["IAM Role<br/>(OIDC AssumeRole)"]
     S3b["S3 Bucket<br/>Terraform State"]
-    DDBb["DynamoDB<br/>State Lock"]
+    Lockfile["S3<br/>Native Lockfile"]
 
     subgraph VPC["VPC"]
       Pub["Public Subnets"]
@@ -83,7 +83,7 @@ flowchart TB
   CI -->|OIDC Token| IAM
   CI -->|terraform plan/apply| AWS2
   CI --> S3b
-  CI --> DDBb
+  S3b --> Lockfile
 ```
 
 ---
@@ -91,7 +91,7 @@ flowchart TB
 ## 🗄️ 5. Terraform State & Backend
 
 - 🪣 **S3** stores the Terraform state file
-- 🔐 **DynamoDB** provides state locking (prevents concurrent applies)
+- 🔐 **S3 native lockfile** provides state locking (prevents concurrent applies)
 - 🛠️ Backend resources are created via `bootstrap/backend`
 - 🔒 State is encrypted and versioned
 
