@@ -1,0 +1,27 @@
+name: AWS OIDC Smoke Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  sts:
+    name: Assume role and call STS
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          aws-region: us-east-1
+          role-to-assume: arn:aws:iam::978121310268:role/github-actions-bootstrap-identity
+          role-session-name: oidc-smoke-test-${{ github.run_id }}
+          allowed-account-ids: "978121310268"
+          unset-current-credentials: true
+
+      - name: Get caller identity
+        run: aws sts get-caller-identity
