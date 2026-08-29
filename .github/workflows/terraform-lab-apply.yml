@@ -1,0 +1,77 @@
+name: Terraform Lab Apply
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "environments/lab/**"
+      - ".github/workflows/terraform-lab-apply.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: terraform-lab-apply
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    name: Terraform apply
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      # Enable required reviewers on the GitHub Environment named "lab".
+      name: lab
+
+    defaults:
+      run:
+        working-directory: environments/lab
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: "1.10.5"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          role-to-assume: arn:aws:iam::978121310268:role/github-actions-terraform-lab-apply
+          aws-region: us-east-1
+          role-session-name: terraform-lab-apply-${{ github.run_id }}
+          allowed-account-ids: "978121310268"
+          unset-current-credentials: true
+
+      - name: Terraform init
+        run: |
+          terraform init \
+            -input=false \
+            -backend-config="bucket=infra-iac-978121310268-tfstate"
+
+      - name: Terraform format check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan
+        run: |
+          terraform plan \
+            -input=false \
+            -no-color \
+            -out=tfplan
+
+      - name: Terraform apply
+        run: |
+          terraform apply \
+            -input=false \
+            -auto-approve \
+            tfplan

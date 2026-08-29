@@ -20,11 +20,12 @@ locals {
   terraform_lab_apply_role_name   = "github-actions-terraform-lab-apply"
   terraform_lab_apply_policy_name = "github-actions-terraform-lab-apply"
 
-  lab_environment     = "lab"
-  lab_state_key       = "environments/lab/terraform.tfstate"
-  lab_lockfile_key    = "${local.lab_state_key}.tflock"
-  lab_state_object    = "${local.state_bucket_arn}/${local.lab_state_key}"
-  lab_lockfile_object = "${local.state_bucket_arn}/${local.lab_lockfile_key}"
+  lab_environment                     = "lab"
+  github_oidc_lab_environment_subject = "repo:${local.github_repository_full_name}:environment:${local.lab_environment}"
+  lab_state_key                       = "environments/lab/terraform.tfstate"
+  lab_lockfile_key                    = "${local.lab_state_key}.tflock"
+  lab_state_object                    = "${local.state_bucket_arn}/${local.lab_state_key}"
+  lab_lockfile_object                 = "${local.state_bucket_arn}/${local.lab_lockfile_key}"
 
   ec2_vpc_arn              = "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:vpc/*"
   ec2_subnet_arn           = "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:subnet/*"
@@ -285,7 +286,7 @@ data "aws_iam_policy_document" "github_actions_terraform_lab_apply_assume_role" 
     condition {
       test     = "StringEquals"
       variable = "${local.github_oidc_provider_host}:sub"
-      values   = [local.github_oidc_subject]
+      values   = [local.github_oidc_lab_environment_subject]
     }
   }
 }
