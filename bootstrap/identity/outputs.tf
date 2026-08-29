@@ -43,6 +43,64 @@ output "state_bucket_name" {
   value       = local.state_bucket_name
 }
 
+output "terraform_lab_apply_permissions_policy" {
+  description = "Permissions policy attached to the GitHub Actions Terraform lab apply role."
+  value       = jsondecode(data.aws_iam_policy_document.terraform_lab_apply.json)
+}
+
+output "terraform_lab_apply_policy_arn" {
+  description = "ARN of the policy granting Terraform apply access to the lab state and network foundation."
+  value       = aws_iam_policy.terraform_lab_apply.arn
+}
+
+output "terraform_lab_apply_role_arn" {
+  description = "ARN of the GitHub Actions Terraform lab apply role."
+  value       = aws_iam_role.github_actions_terraform_lab_apply.arn
+}
+
+output "terraform_lab_apply_role_name" {
+  description = "Name of the GitHub Actions Terraform lab apply role."
+  value       = aws_iam_role.github_actions_terraform_lab_apply.name
+}
+
+output "terraform_lab_apply_trust_policy" {
+  description = "Trust policy for the GitHub Actions Terraform lab apply role."
+  value       = jsondecode(data.aws_iam_policy_document.github_actions_terraform_lab_apply_assume_role.json)
+}
+
+output "terraform_lab_plan_permissions_policy" {
+  description = "Permissions policy attached to the GitHub Actions Terraform lab plan role."
+  value       = jsondecode(data.aws_iam_policy_document.terraform_lab_plan.json)
+}
+
+output "terraform_lab_plan_policy_arn" {
+  description = "ARN of the policy granting read-only Terraform plan access to the lab state and network foundation."
+  value       = aws_iam_policy.terraform_lab_plan.arn
+}
+
+output "terraform_lab_plan_role_arn" {
+  description = "ARN of the GitHub Actions Terraform lab plan role."
+  value       = aws_iam_role.github_actions_terraform_lab_plan.arn
+}
+
+output "terraform_lab_plan_role_name" {
+  description = "Name of the GitHub Actions Terraform lab plan role."
+  value       = aws_iam_role.github_actions_terraform_lab_plan.name
+}
+
+output "terraform_lab_plan_trust_policy" {
+  description = "Trust policy for the GitHub Actions Terraform lab plan role."
+  value       = jsondecode(data.aws_iam_policy_document.github_actions_terraform_lab_plan_assume_role.json)
+}
+
+output "terraform_lab_plan_workflow_notes" {
+  description = "Operational notes for the future pull request Terraform plan workflow."
+  value = {
+    terraform_plan_command    = "terraform plan -lock=false"
+    role_assumption_condition = "github.event.pull_request.head.repo.full_name == github.repository"
+  }
+}
+
 output "trust_policy" {
   description = "Trust policy for the GitHub Actions bootstrap identity role."
   value       = jsondecode(data.aws_iam_policy_document.github_actions_assume_role.json)
