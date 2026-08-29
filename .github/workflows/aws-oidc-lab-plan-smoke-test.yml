@@ -1,0 +1,38 @@
+name: AWS OIDC Lab Plan Smoke Test
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/aws-oidc-lab-plan-smoke-test.yml"
+      - "environments/lab/**"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  smoke-test:
+    name: Assume PLAN role and read EC2
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    timeout-minutes: 5
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          role-to-assume: arn:aws:iam::978121310268:role/github-actions-terraform-lab-plan
+          aws-region: us-east-1
+          role-session-name: lab-plan-smoke-${{ github.run_id }}
+          allowed-account-ids: "978121310268"
+          unset-current-credentials: true
+
+      - name: Get caller identity
+        run: aws sts get-caller-identity
+
+      - name: Verify EC2 read access
+        run: |
+          aws ec2 describe-vpcs \
+            --region us-east-1 \
+            --output json > /dev/null
+          echo "PLAN role OIDC smoke test passed."
