@@ -54,6 +54,7 @@ locals {
     "ManagedBy",
     "Name",
     "Owner",
+    "Purpose",
     "Tier",
   ]
 
