@@ -26,6 +26,7 @@ locals {
     Owner       = var.owner
     ManagedBy   = "Terraform"
     CostCenter  = "platform"
+    Purpose     = "platform-engineering-lab"
   }
 
 }
