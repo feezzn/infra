@@ -4,6 +4,12 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
+variable "enable_eks_egress" {
+  description = "Whether to create the optional NAT-based outbound IPv4 path for future private EKS nodes."
+  type        = bool
+  default     = true
+}
+
 variable "owner" {
   description = "Owner tag applied to lab resources."
   type        = string

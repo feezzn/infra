@@ -1,5 +1,7 @@
 aws_region = "us-east-1"
 
+enable_eks_egress = true
+
 project_name = "infra-iac"
 owner        = "Felipe"
 
