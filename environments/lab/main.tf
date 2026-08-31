@@ -94,3 +94,34 @@ resource "aws_route_table_association" "private" {
   subnet_id      = each.value.id
   route_table_id = aws_route_table.private[each.key].id
 }
+
+resource "aws_eip" "eks_egress" {
+  count = var.enable_eks_egress ? 1 : 0
+
+  domain = "vpc"
+
+  tags = {
+    Name = "${local.name_prefix}-eks-egress-nat-eip"
+  }
+}
+
+resource "aws_nat_gateway" "eks_egress" {
+  count = var.enable_eks_egress ? 1 : 0
+
+  allocation_id = aws_eip.eks_egress[0].id
+  subnet_id     = aws_subnet.public["0"].id
+
+  tags = {
+    Name = "${local.name_prefix}-eks-egress-nat"
+  }
+
+  depends_on = [aws_internet_gateway.lab]
+}
+
+resource "aws_route" "private_default_ipv4" {
+  for_each = var.enable_eks_egress ? { for key, route_table in aws_route_table.private : key => route_table.id } : {}
+
+  route_table_id         = each.value
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = aws_nat_gateway.eks_egress[0].id
+}

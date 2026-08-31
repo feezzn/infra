@@ -17,8 +17,9 @@ locals {
   terraform_lab_plan_role_name   = "github-actions-terraform-lab-plan"
   terraform_lab_plan_policy_name = "github-actions-terraform-lab-plan"
 
-  terraform_lab_apply_role_name   = "github-actions-terraform-lab-apply"
-  terraform_lab_apply_policy_name = "github-actions-terraform-lab-apply"
+  terraform_lab_apply_role_name    = "github-actions-terraform-lab-apply"
+  terraform_lab_apply_policy_name  = "github-actions-terraform-lab-apply"
+  terraform_lab_egress_policy_name = "github-actions-terraform-lab-egress"
 
   lab_environment                     = "lab"
   github_oidc_lab_environment_subject = "repo:${local.github_repository_full_name}:environment:${local.lab_environment}"
@@ -31,12 +32,19 @@ locals {
   ec2_subnet_arn           = "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:subnet/*"
   ec2_internet_gateway_arn = "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:internet-gateway/*"
   ec2_route_table_arn      = "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:route-table/*"
+  ec2_elastic_ip_arn       = "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:elastic-ip/*"
+  ec2_nat_gateway_arn      = "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:natgateway/*"
 
   terraform_lab_network_resource_arns = [
     local.ec2_internet_gateway_arn,
     local.ec2_route_table_arn,
     local.ec2_subnet_arn,
     local.ec2_vpc_arn,
+  ]
+
+  terraform_lab_egress_resource_arns = [
+    local.ec2_elastic_ip_arn,
+    local.ec2_nat_gateway_arn,
   ]
 
   terraform_lab_request_tag_keys = [
@@ -46,6 +54,7 @@ locals {
     "Name",
     "Owner",
     "Project",
+    "Purpose",
     "Tier",
   ]
 
@@ -235,7 +244,9 @@ data "aws_iam_policy_document" "terraform_lab_plan" {
     effect = "Allow"
     actions = [
       "ec2:DescribeAvailabilityZones",
+      "ec2:DescribeAddresses",
       "ec2:DescribeInternetGateways",
+      "ec2:DescribeNatGateways",
       "ec2:DescribeRouteTables",
       "ec2:DescribeSubnets",
       "ec2:DescribeTags",
@@ -722,4 +733,255 @@ resource "aws_iam_policy" "terraform_lab_apply" {
 resource "aws_iam_role_policy_attachment" "terraform_lab_apply" {
   role       = aws_iam_role.github_actions_terraform_lab_apply.name
   policy_arn = aws_iam_policy.terraform_lab_apply.arn
+}
+
+data "aws_iam_policy_document" "terraform_lab_egress" {
+  statement {
+    sid    = "ReadEc2LabEgress"
+    effect = "Allow"
+    actions = [
+      "ec2:DescribeAddresses",
+      "ec2:DescribeNatGateways",
+    ]
+    resources = ["*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "ec2:Region"
+      values   = [var.aws_region]
+    }
+  }
+
+  statement {
+    sid       = "AllocateTaggedLabElasticIp"
+    effect    = "Allow"
+    actions   = ["ec2:AllocateAddress"]
+    resources = [local.ec2_elastic_ip_arn]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestTag/Project"
+      values   = [var.project_name]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestTag/Environment"
+      values   = [local.lab_environment]
+    }
+
+    condition {
+      test     = "ForAllValues:StringEquals"
+      variable = "aws:TagKeys"
+      values   = local.terraform_lab_request_tag_keys
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "ec2:Region"
+      values   = [var.aws_region]
+    }
+  }
+
+  statement {
+    sid       = "ReleaseTaggedLabElasticIp"
+    effect    = "Allow"
+    actions   = ["ec2:ReleaseAddress"]
+    resources = [local.ec2_elastic_ip_arn]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/Project"
+      values   = [var.project_name]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/Environment"
+      values   = [local.lab_environment]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "ec2:Region"
+      values   = [var.aws_region]
+    }
+  }
+
+  statement {
+    sid       = "CreateTaggedLabNatGateway"
+    effect    = "Allow"
+    actions   = ["ec2:CreateNatGateway"]
+    resources = [local.ec2_nat_gateway_arn]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestTag/Project"
+      values   = [var.project_name]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestTag/Environment"
+      values   = [local.lab_environment]
+    }
+
+    condition {
+      test     = "ForAllValues:StringEquals"
+      variable = "aws:TagKeys"
+      values   = local.terraform_lab_request_tag_keys
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "ec2:Region"
+      values   = [var.aws_region]
+    }
+  }
+
+  statement {
+    sid     = "CreateLabNatGatewayInTaggedNetwork"
+    effect  = "Allow"
+    actions = ["ec2:CreateNatGateway"]
+    resources = [
+      local.ec2_elastic_ip_arn,
+      local.ec2_subnet_arn,
+      local.ec2_vpc_arn,
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/Project"
+      values   = [var.project_name]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/Environment"
+      values   = [local.lab_environment]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "ec2:Region"
+      values   = [var.aws_region]
+    }
+  }
+
+  statement {
+    sid       = "DeleteTaggedLabNatGateway"
+    effect    = "Allow"
+    actions   = ["ec2:DeleteNatGateway"]
+    resources = [local.ec2_nat_gateway_arn]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/Project"
+      values   = [var.project_name]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/Environment"
+      values   = [local.lab_environment]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "ec2:Region"
+      values   = [var.aws_region]
+    }
+  }
+
+  statement {
+    sid     = "TagLabEgressResourcesOnCreate"
+    effect  = "Allow"
+    actions = ["ec2:CreateTags"]
+    resources = [
+      local.ec2_elastic_ip_arn,
+      local.ec2_nat_gateway_arn,
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "ec2:CreateAction"
+      values = [
+        "AllocateAddress",
+        "CreateNatGateway",
+      ]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestTag/Project"
+      values   = [var.project_name]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestTag/Environment"
+      values   = [local.lab_environment]
+    }
+
+    condition {
+      test     = "ForAllValues:StringEquals"
+      variable = "aws:TagKeys"
+      values   = local.terraform_lab_request_tag_keys
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "ec2:Region"
+      values   = [var.aws_region]
+    }
+  }
+
+  statement {
+    sid    = "UpdateMutableTagsOnTaggedLabEgressResources"
+    effect = "Allow"
+    actions = [
+      "ec2:CreateTags",
+      "ec2:DeleteTags",
+    ]
+    resources = local.terraform_lab_egress_resource_arns
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/Project"
+      values   = [var.project_name]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/Environment"
+      values   = [local.lab_environment]
+    }
+
+    condition {
+      test     = "ForAllValues:StringEquals"
+      variable = "aws:TagKeys"
+      values   = local.terraform_lab_mutable_tag_keys
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "ec2:Region"
+      values   = [var.aws_region]
+    }
+  }
+}
+
+resource "aws_iam_policy" "terraform_lab_egress" {
+  name        = local.terraform_lab_egress_policy_name
+  description = "Allows Terraform applies for optional EKS NAT egress in environments/lab."
+  policy      = data.aws_iam_policy_document.terraform_lab_egress.json
+
+  tags = {
+    Name = local.terraform_lab_egress_policy_name
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "terraform_lab_egress" {
+  role       = aws_iam_role.github_actions_terraform_lab_apply.name
+  policy_arn = aws_iam_policy.terraform_lab_egress.arn
 }
