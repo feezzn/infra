@@ -1,0 +1,22 @@
+aws_region = "us-east-1"
+
+project_name = "infra-iac"
+owner        = "Felipe"
+
+network_state_bucket = "infra-iac-978121310268-tfstate"
+network_state_key    = "environments/lab/terraform.tfstate"
+
+kubernetes_version = "1.36"
+
+cluster_endpoint_public_access_cidrs = ["0.0.0.0/0"]
+
+node_instance_types         = ["t3.medium"]
+node_group_desired_size     = 2
+node_group_min_size         = 1
+node_group_max_size         = 3
+eks_admin_role_name         = "eks-lab-admin"
+eks_admin_trusted_user_name = "platform-admin"
+
+# Use this only if the trusted human principal is a stable IAM role or a
+# differently named IAM user. Do not use STS assumed-role session ARNs.
+# eks_admin_trusted_principal_arn = "arn:aws:iam::978121310268:user/platform-admin"
