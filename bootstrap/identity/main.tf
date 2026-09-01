@@ -1679,6 +1679,19 @@ data "aws_iam_policy_document" "terraform_lab_eks_apply_eks_addons" {
   }
 
   statement {
+    sid       = "CreateLabEksAddonPodIdentityAssociation"
+    effect    = "Allow"
+    actions   = ["eks:CreatePodIdentityAssociation"]
+    resources = [local.lab_eks_cluster_arn]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestedRegion"
+      values   = [var.aws_region]
+    }
+  }
+
+  statement {
     sid    = "ManageLabEksAddonPodIdentityAssociation"
     effect = "Allow"
     actions = [
