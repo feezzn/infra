@@ -2051,6 +2051,13 @@ data "aws_iam_policy_document" "terraform_lab_eks_apply_iam_roles" {
   }
 
   statement {
+    sid       = "ReadLabEksIamRoleInlinePolicies"
+    effect    = "Allow"
+    actions   = ["iam:ListRolePolicies"]
+    resources = local.lab_eks_iam_role_arns
+  }
+
+  statement {
     sid    = "ManageTaggedLabEksIamRoles"
     effect = "Allow"
     actions = [
