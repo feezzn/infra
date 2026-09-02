@@ -2274,6 +2274,19 @@ data "aws_iam_policy_document" "terraform_lab_eks_apply_passrole" {
   }
 
   statement {
+    sid       = "PassLabEksVpcCniRoleToPodIdentity"
+    effect    = "Allow"
+    actions   = ["iam:PassRole"]
+    resources = [local.lab_eks_vpc_cni_role_arn]
+
+    condition {
+      test     = "StringEquals"
+      variable = "iam:PassedToService"
+      values   = ["pods.eks.amazonaws.com"]
+    }
+  }
+
+  statement {
     sid       = "CreateEksServiceLinkedRolesIfMissing"
     effect    = "Allow"
     actions   = ["iam:CreateServiceLinkedRole"]
