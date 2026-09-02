@@ -64,7 +64,7 @@ variable "cluster_endpoint_public_access_cidrs" {
 variable "node_instance_types" {
   description = "Instance types for the managed node group."
   type        = list(string)
-  default     = ["t3.medium"]
+  default     = ["t3.small"]
 
   validation {
     condition     = length(var.node_instance_types) > 0
